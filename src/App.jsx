@@ -20,28 +20,9 @@ const theme = {
 };
 
 const mockData = {
-  growth: [
-    { date: "2025-03-01", height: 60.5, weight: 5.2 },
-    { date: "2025-02-01", height: 58.0, weight: 4.8 },
-    { date: "2025-01-01", height: 55.5, weight: 4.3 },
-    { date: "2024-12-01", height: 53.0, weight: 3.9 },
-    { date: "2024-11-01", height: 50.5, weight: 3.5 },
-  ],
-  feeding: [
-    { id: 1, datetime: "2025-03-06 09:20", ml: 130, method: "瓶喂", type: "奶粉" },
-    { id: 2, datetime: "2025-03-06 06:45", ml: 90, method: "亲喂", type: "母乳" },
-    { id: 3, datetime: "2025-03-05 21:30", ml: 120, method: "瓶喂", type: "奶粉" },
-    { id: 4, datetime: "2025-03-05 18:10", ml: 100, method: "亲喂", type: "母乳" },
-    { id: 5, datetime: "2025-03-05 14:20", ml: 110, method: "瓶喂", type: "奶粉" },
-  ],
-  poop: [
-    { id: 1, datetime: "2025-03-06 10:15", type: "大便", state: "黄色糊状，正常" },
-    { id: 2, datetime: "2025-03-06 08:30", type: "小便", state: "" },
-    { id: 3, datetime: "2025-03-06 07:00", type: "小便", state: "" },
-    { id: 4, datetime: "2025-03-05 20:00", type: "大便", state: "水便分离，偏稀" },
-    { id: 5, datetime: "2025-03-05 16:40", type: "小便", state: "" },
-    { id: 6, datetime: "2025-03-05 13:10", type: "大便", state: "黄色糊状，正常" },
-  ],
+  growth: [],
+  feeding: [],
+  poop: [],
 };
 
 // WHO growth percentiles (simplified for demo)
@@ -596,21 +577,50 @@ function WeightDetailPage({ onBack }) {
   );
 }
 
+
+function EmptyState({ emoji, title, subtitle, btnText, onBtn }) {
+  return (
+    <div style={{
+      textAlign: "center", padding: "48px 24px",
+      background: "white", borderRadius: 20,
+      border: "1.5px dashed #F0E8E4",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.04)"
+    }}>
+      <div style={{ fontSize: 52, marginBottom: 16 }}>{emoji}</div>
+      <p style={{ fontSize: 16, fontWeight: 700, color: "#2D2D2D", fontFamily: "'PingFang SC', sans-serif", marginBottom: 8 }}>{title}</p>
+      <p style={{ fontSize: 13, color: "#A8A8A8", fontFamily: "'PingFang SC', sans-serif", lineHeight: 1.6, marginBottom: onBtn ? 20 : 0 }}>{subtitle}</p>
+      {onBtn && (
+        <button onClick={onBtn} style={{
+          background: "linear-gradient(135deg, #FF8FAB, #FF6B9D)", border: "none",
+          borderRadius: 50, padding: "12px 28px", color: "white",
+          fontSize: 14, fontWeight: 700, cursor: "pointer",
+          fontFamily: "'PingFang SC', sans-serif",
+          boxShadow: "0 4px 14px rgba(255,143,171,0.4)"
+        }}>{btnText}</button>
+      )}
+    </div>
+  );
+}
+
 // ── HomeTab ────────────────────────────────────────────────────────────────
 function HomeTab({ onVoice, onDetail }) {
-  const today = "2025-03-06";
+  const today = new Date().toISOString().slice(0, 10);
   const todayFeeding = mockData.feeding.filter(f => f.datetime.startsWith(today));
   const totalMl = todayFeeding.reduce((s, f) => s + f.ml, 0);
   const todayPoop = mockData.poop.filter(p => p.datetime.startsWith(today));
   const bigCount = todayPoop.filter(p => p.type === "大便").length;
   const smallCount = todayPoop.filter(p => p.type === "小便").length;
   const lastGrowth = mockData.growth[0];
+  const hasAnyData = mockData.feeding.length > 0 || mockData.poop.length > 0 || mockData.growth.length > 0;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
 
   const statCards = [
-    { id: "feeding", icon: "🍼", label: "今日奶量", val: `${totalMl}ml`, sub: `共${todayFeeding.length}次`, color: theme.primaryLight, accent: theme.primary },
-    { id: "poop",    icon: "💩", label: "今日排便", val: `${bigCount}次大便`, sub: `${smallCount}次小便`, color: theme.accentDeep + "22", accent: theme.accentDeep },
-    { id: "height",  icon: "📏", label: "最新身高", val: `${lastGrowth.height}cm`, sub: "3月1日测量", color: theme.tealLight, accent: theme.teal },
-    { id: "weight",  icon: "⚖️", label: "最新体重", val: `${lastGrowth.weight}kg`, sub: "3月1日测量", color: theme.purpleLight, accent: theme.purple },
+    { id: "feeding", icon: "🍼", label: "今日奶量", val: totalMl > 0 ? `${totalMl}ml` : "暂无记录", sub: totalMl > 0 ? `共${todayFeeding.length}次` : "点击去记录", color: theme.primaryLight, accent: theme.primary },
+    { id: "poop",    icon: "💩", label: "今日排便", val: (bigCount + smallCount) > 0 ? `${bigCount}次大便` : "暂无记录", sub: (bigCount + smallCount) > 0 ? `${smallCount}次小便` : "点击去记录", color: theme.accentDeep + "22", accent: theme.accentDeep },
+    { id: "height",  icon: "📏", label: "最新身高", val: lastGrowth ? `${lastGrowth.height}cm` : "未记录", sub: lastGrowth ? lastGrowth.date.slice(5) + "测量" : "点击去记录", color: theme.tealLight, accent: theme.teal },
+    { id: "weight",  icon: "⚖️", label: "最新体重", val: lastGrowth ? `${lastGrowth.weight}kg` : "未记录", sub: lastGrowth ? lastGrowth.date.slice(5) + "测量" : "点击去记录", color: theme.purpleLight, accent: theme.purple },
   ];
 
   return (
@@ -619,12 +629,12 @@ function HomeTab({ onVoice, onDetail }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0 20px" }}>
         <div>
           <p style={{ fontSize: 13, color: theme.textLight, fontFamily: "'PingFang SC', sans-serif" }}>
-            2025年3月6日 · 星期四
+            {dateStr}
           </p>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: theme.text, margin: "4px 0 0",
             fontFamily: "'PingFang SC', sans-serif", lineHeight: 1.2 }}>
-            宝宝今天<br/>
-            <span style={{ color: theme.primary }}>状态良好 ✨</span>
+            {hasAnyData ? "宝宝今天" : "你好 👋"}<br/>
+            <span style={{ color: theme.primary }}>{hasAnyData ? "记录了成长 ✨" : "开始记录宝宝成长吧"}</span>
           </h1>
         </div>
         <div style={{
@@ -687,30 +697,50 @@ function HomeTab({ onVoice, onDetail }) {
 
       {/* Recent activity */}
       <SectionTitle>最近记录</SectionTitle>
-      <Card>
-        {[mockData.feeding[0], mockData.poop[0], mockData.poop[1]].map((item, i) => (
-          <div key={i} style={{
-            display: "flex", alignItems: "center", gap: 12,
-            padding: "10px 0", borderBottom: i < 2 ? `1px solid ${theme.border}` : "none"
-          }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: item.ml ? theme.primaryLight : theme.accentDeep + "22",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
-            }}>
-              {item.ml ? "🍼" : item.type === "大便" ? "💩" : "💧"}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
-                {item.ml ? `${item.type} ${item.ml}ml · ${item.method}` : `${item.type}${item.state ? " · " + item.state : ""}`}
-              </p>
-              <p style={{ fontSize: 11, color: theme.textLight, fontFamily: "'PingFang SC', sans-serif" }}>
-                {item.datetime.split(" ")[1]}
-              </p>
-            </div>
-          </div>
-        ))}
-      </Card>
+      {(() => {
+        const recentAll = [
+          ...mockData.feeding.map(f => ({ ...f, _type: "feeding" })),
+          ...mockData.poop.map(p => ({ ...p, _type: "poop" }))
+        ].sort((a, b) => b.datetime.localeCompare(a.datetime)).slice(0, 3);
+
+        if (recentAll.length === 0) {
+          return (
+            <EmptyState
+              emoji="📝"
+              title="还没有任何记录"
+              subtitle={"点击上方「点我记录」语音录入\n或前往各功能页手动添加"}
+              btnText="语音记录"
+              onBtn={onVoice}
+            />
+          );
+        }
+        return (
+          <Card>
+            {recentAll.map((item, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 0", borderBottom: i < recentAll.length - 1 ? `1px solid ${theme.border}` : "none"
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: item._type === "feeding" ? theme.primaryLight : theme.accentDeep + "22",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18
+                }}>
+                  {item._type === "feeding" ? "🍼" : item.type === "大便" ? "💩" : "💧"}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
+                    {item._type === "feeding" ? `${item.type} ${item.ml}ml · ${item.method}` : `${item.type}${item.state ? " · " + item.state : ""}`}
+                  </p>
+                  <p style={{ fontSize: 11, color: theme.textLight, fontFamily: "'PingFang SC', sans-serif" }}>
+                    {item.datetime.split(" ")[1]}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </Card>
+        );
+      })()}
     </div>
   );
 }
@@ -740,7 +770,14 @@ function GrowthTab() {
             }}>{t === "height" ? "📏 身高曲线" : "⚖️ 体重曲线"}</button>
           ))}
         </div>
-        <GrowthChart data={mockData.growth} type={chartType} />
+        {mockData.growth.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "32px 0", color: theme.textLight, fontFamily: "'PingFang SC', sans-serif" }}>
+            <p style={{ fontSize: 32, marginBottom: 8 }}>📈</p>
+            <p style={{ fontSize: 13 }}>添加记录后，这里将显示成长曲线</p>
+          </div>
+        ) : (
+          <GrowthChart data={mockData.growth} type={chartType} />
+        )}
         <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
           {["P3", "P50中位", "P97"].map((l, i) => (
             <div key={l} style={{
@@ -754,42 +791,46 @@ function GrowthTab() {
 
       {/* Records list */}
       <SectionTitle>历史记录</SectionTitle>
-      <Card style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
-          background: theme.bg, padding: "12px 20px",
-          borderBottom: `1px solid ${theme.border}`
-        }}>
-          {["日期", "身高(cm)", "体重(kg)", ""].map((h, i) => (
-            <p key={i} style={{ fontSize: 11, fontWeight: 700, color: theme.textLight,
-              fontFamily: "'PingFang SC', sans-serif", textAlign: i > 0 ? "center" : "left" }}>{h}</p>
-          ))}
-        </div>
-        {mockData.growth.map((item, i) => (
-          <div key={i} style={{
+      {mockData.growth.length === 0 ? (
+        <EmptyState emoji="📏" title="还没有成长记录" subtitle="记录宝宝的身高和体重，生成专属成长曲线" />
+      ) : (
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{
             display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            padding: "14px 20px", borderBottom: i < mockData.growth.length - 1 ? `1px solid ${theme.border}` : "none",
-            alignItems: "center"
+            background: theme.bg, padding: "12px 20px",
+            borderBottom: `1px solid ${theme.border}`
           }}>
-            <p style={{ fontSize: 13, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
-              {item.date.slice(5)}
-            </p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: theme.teal, textAlign: "center",
-              fontFamily: "'PingFang SC', sans-serif" }}>{item.height}</p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: theme.purple, textAlign: "center",
-              fontFamily: "'PingFang SC', sans-serif" }}>{item.weight}</p>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: theme.green }} />
-            </div>
+            {["日期", "身高(cm)", "体重(kg)", ""].map((h, i) => (
+              <p key={i} style={{ fontSize: 11, fontWeight: 700, color: theme.textLight,
+                fontFamily: "'PingFang SC', sans-serif", textAlign: i > 0 ? "center" : "left" }}>{h}</p>
+            ))}
           </div>
-        ))}
-      </Card>
+          {mockData.growth.map((item, i) => (
+            <div key={i} style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr",
+              padding: "14px 20px", borderBottom: i < mockData.growth.length - 1 ? `1px solid ${theme.border}` : "none",
+              alignItems: "center"
+            }}>
+              <p style={{ fontSize: 13, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
+                {item.date.slice(5)}
+              </p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: theme.teal, textAlign: "center",
+                fontFamily: "'PingFang SC', sans-serif" }}>{item.height}</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: theme.purple, textAlign: "center",
+                fontFamily: "'PingFang SC', sans-serif" }}>{item.weight}</p>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: theme.green }} />
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
     </div>
   );
 }
 
 function FeedingTab() {
-  const today = "2025-03-06";
+  const today = new Date().toISOString().slice(0, 10);
   const todayFeeding = mockData.feeding.filter(f => f.datetime.startsWith(today));
   const totalMl = todayFeeding.reduce((s, f) => s + f.ml, 0);
 
@@ -808,7 +849,7 @@ function FeedingTab() {
         border: `1px solid ${theme.primaryLight}`
       }}>
         <p style={{ fontSize: 12, color: theme.textMid, fontFamily: "'PingFang SC', sans-serif", marginBottom: 8 }}>
-          今日 · 3月6日
+          今日 · {new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
@@ -843,55 +884,61 @@ function FeedingTab() {
 
       {/* Records */}
       <SectionTitle>喂奶记录</SectionTitle>
-      {mockData.feeding.map((item, i) => {
-        const isToday = item.datetime.startsWith(today);
-        return (
-          <div key={item.id} style={{
-            background: theme.card, borderRadius: 16, padding: "16px",
-            marginBottom: 10, border: `1px solid ${isToday ? theme.primaryLight : theme.border}`,
-            boxShadow: isToday ? "0 2px 12px rgba(255,143,171,0.12)" : "0 1px 6px rgba(0,0,0,0.04)",
-            display: "flex", alignItems: "center", gap: 14
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 14,
-              background: item.type === "奶粉" ? theme.primaryLight : theme.tealLight,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22
+      {mockData.feeding.length === 0 ? (
+        <EmptyState emoji="🍼" title="还没有喂奶记录" subtitle={"点击首页「点我记录」语音录入\n例如：9点20分宝宝喝奶粉130ml"} />
+      ) : (
+        mockData.feeding.map((item, i) => {
+          const isToday = item.datetime.startsWith(today);
+          const todayLabel = new Date().toISOString().slice(0, 10);
+          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          return (
+            <div key={item.id} style={{
+              background: theme.card, borderRadius: 16, padding: "16px",
+              marginBottom: 10, border: `1px solid ${isToday ? theme.primaryLight : theme.border}`,
+              boxShadow: isToday ? "0 2px 12px rgba(255,143,171,0.12)" : "0 1px 6px rgba(0,0,0,0.04)",
+              display: "flex", alignItems: "center", gap: 14
             }}>
-              {item.type === "奶粉" ? "🍼" : "🤱"}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{
-                  background: item.type === "奶粉" ? theme.primaryLight : theme.tealLight,
-                  color: item.type === "奶粉" ? theme.primary : theme.teal,
-                  fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
-                  fontFamily: "'PingFang SC', sans-serif"
-                }}>{item.type}</span>
-                <span style={{
-                  background: theme.bg, color: theme.textMid,
-                  fontSize: 11, padding: "2px 8px", borderRadius: 6,
-                  fontFamily: "'PingFang SC', sans-serif"
-                }}>{item.method}</span>
+              <div style={{
+                width: 44, height: 44, borderRadius: 14,
+                background: item.type === "奶粉" ? theme.primaryLight : theme.tealLight,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22
+              }}>
+                {item.type === "奶粉" ? "🍼" : "🤱"}
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <p style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
-                  {item.ml}<span style={{ fontSize: 13, fontWeight: 400, color: theme.textMid }}> ml</span>
-                </p>
-                <p style={{ fontSize: 12, color: isToday ? theme.primary : theme.textLight,
-                  fontFamily: "'PingFang SC', sans-serif", fontWeight: isToday ? 600 : 400 }}>
-                  {item.datetime.replace("2025-03-06", "今天").replace("2025-03-05", "昨天")}
-                </p>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{
+                    background: item.type === "奶粉" ? theme.primaryLight : theme.tealLight,
+                    color: item.type === "奶粉" ? theme.primary : theme.teal,
+                    fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
+                    fontFamily: "'PingFang SC', sans-serif"
+                  }}>{item.type}</span>
+                  <span style={{
+                    background: theme.bg, color: theme.textMid,
+                    fontSize: 11, padding: "2px 8px", borderRadius: 6,
+                    fontFamily: "'PingFang SC', sans-serif"
+                  }}>{item.method}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <p style={{ fontSize: 22, fontWeight: 800, color: theme.text, fontFamily: "'PingFang SC', sans-serif" }}>
+                    {item.ml}<span style={{ fontSize: 13, fontWeight: 400, color: theme.textMid }}> ml</span>
+                  </p>
+                  <p style={{ fontSize: 12, color: isToday ? theme.primary : theme.textLight,
+                    fontFamily: "'PingFang SC', sans-serif", fontWeight: isToday ? 600 : 400 }}>
+                    {item.datetime.replace(todayLabel, "今天").replace(yesterday, "昨天")}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }
 
 function PoopTab() {
-  const today = "2025-03-06";
+  const today = new Date().toISOString().slice(0, 10);
   const todayPoop = mockData.poop.filter(p => p.datetime.startsWith(today));
   const bigCount = todayPoop.filter(p => p.type === "大便").length;
   const smallCount = todayPoop.filter(p => p.type === "小便").length;
@@ -930,43 +977,49 @@ function PoopTab() {
 
       {/* Records */}
       <SectionTitle>排便记录</SectionTitle>
-      {mockData.poop.map((item, i) => {
-        const isToday = item.datetime.startsWith(today);
-        const isBig = item.type === "大便";
-        return (
-          <div key={item.id} style={{
-            background: theme.card, borderRadius: 16, padding: "16px",
-            marginBottom: 10, border: `1px solid ${isToday ? (isBig ? theme.accent : theme.teal) + "44" : theme.border}`,
-            display: "flex", alignItems: "center", gap: 14
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 14,
-              background: isBig ? theme.accentDeep + "22" : theme.tealLight,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22
+      {mockData.poop.length === 0 ? (
+        <EmptyState emoji="💩" title="还没有排便记录" subtitle={"点击首页「点我记录」语音录入\n例如：宝宝刚刚大便了，黄色糊状"} />
+      ) : (
+        mockData.poop.map((item, i) => {
+          const isToday = item.datetime.startsWith(today);
+          const isBig = item.type === "大便";
+          const todayLabel = new Date().toISOString().slice(0, 10);
+          const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+          return (
+            <div key={item.id} style={{
+              background: theme.card, borderRadius: 16, padding: "16px",
+              marginBottom: 10, border: `1px solid ${isToday ? (isBig ? theme.accent : theme.teal) + "44" : theme.border}`,
+              display: "flex", alignItems: "center", gap: 14
             }}>
-              {isBig ? "💩" : "💧"}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, alignItems: "center" }}>
-                <span style={{
-                  fontSize: 14, fontWeight: 700, color: isBig ? theme.accentDeep : theme.teal,
-                  fontFamily: "'PingFang SC', sans-serif"
-                }}>{item.type}</span>
-                <p style={{ fontSize: 12, color: isToday ? theme.primary : theme.textLight,
-                  fontFamily: "'PingFang SC', sans-serif", fontWeight: isToday ? 600 : 400 }}>
-                  {item.datetime.replace("2025-03-06", "今天").replace("2025-03-05", "昨天")}
-                </p>
+              <div style={{
+                width: 44, height: 44, borderRadius: 14,
+                background: isBig ? theme.accentDeep + "22" : theme.tealLight,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22
+              }}>
+                {isBig ? "💩" : "💧"}
               </div>
-              {item.state && (
-                <p style={{ fontSize: 13, color: theme.textMid, fontFamily: "'PingFang SC', sans-serif",
-                  background: theme.bg, borderRadius: 8, padding: "4px 8px", display: "inline-block" }}>
-                  {item.state}
-                </p>
-              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, alignItems: "center" }}>
+                  <span style={{
+                    fontSize: 14, fontWeight: 700, color: isBig ? theme.accentDeep : theme.teal,
+                    fontFamily: "'PingFang SC', sans-serif"
+                  }}>{item.type}</span>
+                  <p style={{ fontSize: 12, color: isToday ? theme.primary : theme.textLight,
+                    fontFamily: "'PingFang SC', sans-serif", fontWeight: isToday ? 600 : 400 }}>
+                    {item.datetime.replace(todayLabel, "今天").replace(yesterday, "昨天")}
+                  </p>
+                </div>
+                {item.state && (
+                  <p style={{ fontSize: 13, color: theme.textMid, fontFamily: "'PingFang SC', sans-serif",
+                    background: theme.bg, borderRadius: 8, padding: "4px 8px", display: "inline-block" }}>
+                    {item.state}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }
@@ -1892,8 +1945,8 @@ export default function App() {
 
   return (
     <div style={{
-      position: "fixed", inset: 0, background: theme.bg,
-      display: "flex", flexDirection: "column",
+      position: "fixed", inset: 0, background: "#F0E8E4", display: "flex",
+      justifyContent: "center", alignItems: "center",
       fontFamily: "'PingFang SC', 'Helvetica Neue', sans-serif"
     }}>
       <style>{`
@@ -1907,8 +1960,31 @@ export default function App() {
         ::-webkit-scrollbar { display: none; }
       `}</style>
 
+      {/* Phone frame */}
+      <div style={{
+        width: "min(390px, 100vw)", height: "min(844px, 100vh)", background: theme.bg,
+        borderRadius: "min(48px, 4vw)",
+        overflow: "hidden", position: "relative", display: "flex", flexDirection: "column",
+        boxShadow: "0 32px 80px rgba(0,0,0,0.25), 0 0 0 8px #1a1a1a, 0 0 0 10px #2a2a2a",
+      }}>
+        {/* Status bar */}
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "14px 28px 0", flexShrink: 0
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: theme.text }}>9:41</span>
+          <div style={{ width: 120, height: 30, background: "#1a1a1a", borderRadius: 20,
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#333" }} />
+          </div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: theme.text }}>●●●</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: theme.text }}>100%</span>
+          </div>
+        </div>
+
         {/* Scroll area */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}>
+        <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
 
           {/* Detail pages (slide in over home) */}
           {detailPage && (
@@ -1946,13 +2022,14 @@ export default function App() {
         {/* Toast */}
         {toast && (
           <div style={{
-            position: "fixed", bottom: 100, left: "50%", transform: "translateX(-50%)",
+            position: "absolute", bottom: 100, left: "50%", transform: "translateX(-50%)",
             background: "#2D2D2D", color: "white", borderRadius: 20,
             padding: "10px 20px", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap",
             fontFamily: "'PingFang SC', sans-serif", zIndex: 200,
             animation: "toastIn 0.3s ease", boxShadow: "0 4px 20px rgba(0,0,0,0.3)"
           }}>{toast}</div>
         )}
+      </div>
     </div>
   );
 }
